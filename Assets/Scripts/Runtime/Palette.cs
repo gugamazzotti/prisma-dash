@@ -3,10 +3,10 @@ using UnityEngine;
 namespace PrismaDash
 {
     /// <summary>
-    /// Cores e materiais. Os templates vivem em Resources e referenciam shaders
-    /// embutidos (Standard e Sprites/Default). Nada de Shader.Find nem do material
-    /// padrão do primitivo: num build WebGL de cena vazia esses shaders são
-    /// removidos e tudo fica magenta.
+    /// Cores e materiais. Os templates em Resources apontam para shaders do
+    /// projeto (PrismaDash/Color e PrismaDash/Particle). Nada de Shader.Find,
+    /// nem do material padrão do primitivo, nem do Standard (centenas de milhares
+    /// de variantes no WebGL).
     /// </summary>
     public static class Palette
     {
@@ -26,13 +26,9 @@ namespace PrismaDash
             var template = LitTemplate();
             var m = new Material(template);
             m.color = c;
-            if (m.HasProperty("_EmissionColor"))
-            {
-                // O asset já nasce com _EMISSION, então a variante existe no player.
-                // Emissão zero continua no mesmo variant, só com a cor preta.
-                m.EnableKeyword("_EMISSION");
-                m.SetColor("_EmissionColor", emission > 0f ? c * emission : Color.black);
-            }
+            // Brilho é um float no shader do projeto, não uma keyword do Standard.
+            if (m.HasProperty("_Emission"))
+                m.SetFloat("_Emission", Mathf.Max(0f, emission));
             return m;
         }
 

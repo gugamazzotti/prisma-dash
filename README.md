@@ -91,10 +91,10 @@ O primeiro build baixa a imagem do editor e pode levar bastante tempo. Os seguin
 ```
 Assets/
   Scenes/Main.unity              cena mínima (só um GameObject marcador; fog linear ligado)
-  Resources/Materials/Lit.mat    Standard com _EMISSION, carregado em runtime
-  Resources/Materials/Unlit.mat  Sprites/Default para as partículas
-  Shaders/PrismaVariants.shadervariants
-                                 variantes de luz direcional, fog e emissão
+  Resources/Materials/Lit.mat    material opaco (shader PrismaDash/Color)
+  Resources/Materials/Unlit.mat  partículas (shader PrismaDash/Particle)
+  Shaders/PrismaColor.shader     cor + luz direcional + brilho, poucas variantes
+  Shaders/PrismaParticle.shader  cor de vértice, uma variante
   WebGLTemplates/PrismaPortrait  página do player: quadro retrato e letterbox no desktop
   Scripts/Runtime/
     Bootstrap.cs                 entrada automática via RuntimeInitializeOnLoadMethod
@@ -111,8 +111,8 @@ ProjectSettings/                 Unity 2022.3.20f1, canvas WebGL 540×960, Gzip 
 ```
 
 ## Notas técnicas
-- Materiais: a cena não tem renderers, então o build WebGL removia o shader Standard. Em runtime o material padrão do `CreatePrimitive` caía no shader de erro e a pista inteira ficava magenta. Agora `Lit.mat` e `Unlit.mat` ficam em `Resources`, o Standard (fileID 46) e o `Sprites/Default` estão em Always Included Shaders, e uma coleção de variantes pré-carrega luz direcional, fog linear e `_EMISSION`. O código clona esses assets; não usa `Shader.Find`.
-- Cores: jogador e portais ciano `(0.10, 0.95, 1)` ou magenta `(1, 0.15, 0.70)` com emissão; paredes escuras sem emissão; orbes da mesma cor com emissão mais forte; partículas usam o material unlit branco e a cor do vértice.
+- Materiais: a cena vazia fazia o WebGL descartar o Standard, e colocar o Standard em Always Included Shaders compilava **339968 variantes** (o build passava de 6 h e era cancelado). Os meshes usam o shader do projeto `PrismaDash/Color` (cor, luz direcional e brilho, só as variantes de fog) e as partículas usam `PrismaDash/Particle`. Os dois estão referenciados por materiais em `Resources`, então entram no player sem `Shader.Find` e sem a explosão de variantes.
+- Cores: jogador e portais ciano `(0.10, 0.95, 1)` ou magenta `(1, 0.15, 0.70)`; paredes e chão escuros; orbes com brilho mais alto; partículas na cor do vértice.
 - Sem TextMeshPro (evita o import de TMP Essentials); fonte `LegacyRuntime.ttf` embutida (a fonte embutida do Unity 2022.2+).
 - Colisão é lógica (pista + cruzamento de z), sem física — determinística e barata no WebGL.
 - No WebGL o áudio só inicia após a primeira interação do usuário (regra dos navegadores) — o clique de início resolve isso.
