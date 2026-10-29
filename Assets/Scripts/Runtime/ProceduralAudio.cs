@@ -7,7 +7,7 @@ namespace PrismaDash
     {
         private const int Rate = 44100;
         private AudioSource _src;
-        private AudioClip _switch, _pass, _orb, _death, _move;
+        private AudioClip _switch, _pass, _orb, _death, _move, _graze;
 
         private void Awake()
         {
@@ -17,11 +17,13 @@ namespace PrismaDash
             _pass   = Sweep("pass", 520f, 1040f, 0.12f, 0.30f);
             _orb    = Sweep("orb", 990f, 1480f, 0.07f, 0.25f);
             _move   = Sweep("move", 220f, 260f, 0.04f, 0.20f);
+            _graze  = Sweep("graze", 740f, 1560f, 0.07f, 0.32f);
             _death  = Noise("death", 0.6f, 0.5f);
         }
 
         public void Switch() => _src.PlayOneShot(_switch);
         public void Move() => _src.PlayOneShot(_move);
+        public void Graze() { _src.pitch = 1.25f; _src.PlayOneShot(_graze); }
         public void Death() => _src.PlayOneShot(_death);
         public void Pass(float pitch) { _src.pitch = pitch; _src.PlayOneShot(_pass); }
         public void Orb(int combo) { _src.pitch = 1f + Mathf.Min(combo, 12) * 0.06f; _src.PlayOneShot(_orb); }

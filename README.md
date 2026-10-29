@@ -9,6 +9,7 @@ Sua esfera tem **polaridade**: **Ciano** ou **Magenta**. Portais coloridos ocupa
 
 - Velocidade sobe de 14 → 42 u/s em ~100 s; o espaçamento entre obstáculos diminui.
 - Pontos por distância + bônus (portal 10×combo, orbe 5×combo). Recorde salvo em `PlayerPrefs` (persistente no navegador).
+- Desviar de uma parede no último instante conta como **graze**: a esfera já saiu da pista da parede, mas ainda está perto. Isso soma de 12 a 28 pontos (sobe com a velocidade), solta uma faísca dourada, um tremor curto e o texto GRAZE. Desviar com folga não pontua.
 - Juice: camera shake por "trauma", partículas, áudio sintetizado em runtime, câmera lenta no game over.
 
 ## Controles
