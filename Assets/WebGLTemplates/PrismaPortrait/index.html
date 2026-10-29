@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -62,7 +62,7 @@
   <div id="unity-container">
     <canvas id="unity-canvas" width={{{ WIDTH }}} height={{{ HEIGHT }}} tabindex="-1"></canvas>
     <div id="unity-loading">
-      <div>Carregando Prisma Dash…</div>
+      <div>Loading Prisma Dash…</div>
       <div class="bar"><div id="unity-progress"></div></div>
     </div>
     <div id="unity-error" style="display:none"></div>
@@ -146,7 +146,7 @@
       if (loading) loading.style.display = "none";
       if (errorBox) {
         errorBox.style.display = "block";
-        errorBox.textContent = "Não foi possível carregar o jogo.";
+        errorBox.textContent = "Could not load the game.";
       }
     };
     document.body.appendChild(script);

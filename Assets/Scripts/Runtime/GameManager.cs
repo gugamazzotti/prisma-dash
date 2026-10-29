@@ -62,6 +62,8 @@ namespace PrismaDash
             _light = lightGo.GetComponent<Light>();
             _light.type = LightType.Directional;
             _light.intensity = 1.1f;
+            _light.shadows = LightShadows.None;
+            _light.renderMode = LightRenderMode.ForcePixel;
             lightGo.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.35f, 0.3f, 0.45f);
@@ -138,18 +140,18 @@ namespace PrismaDash
         private void EnterMenu()
         {
             _state = State.Menu;
-            _hud.Score.text = $"RECORDE {_best}";
+            _hud.Score.text = $"BEST {_best}";
             _hud.Combo.text = "";
             _hud.Center.text =
                 "<size=72><b><color=#1AF2FF>PRISMA</color> <color=#FF26B3>DASH</color></b></size>\n\n" +
-                "Portais só deixam passar a <b>sua cor</b>.\n" +
-                "Desvie das paredes escuras.\n" +
-                "Colete orbes da sua cor.\n\n" +
-                "<b>A/D</b> ou <b>←/→</b>  mudar de pista\n" +
-                "<b>ESPAÇO</b>, <b>W</b> ou <b>↑</b>  trocar cor\n\n" +
-                "Toque: esquerda e direita mudam a pista.\n" +
-                "O centro troca a cor. Deslizar também vale.\n\n" +
-                "<b>Toque para começar</b>";
+                "Gates only let <b>your color</b> through.\n" +
+                "Dodge the dark walls.\n" +
+                "Grab orbs that match your color.\n\n" +
+                "Tap the <b>left</b> or <b>right</b> side to change lane,\n" +
+                "or swipe sideways.\n" +
+                "Tap the <b>center</b>, or swipe up or down,\n" +
+                "to switch color.\n\n" +
+                "<b>Tap to start</b>";
         }
 
         private void StartGame()
@@ -177,9 +179,9 @@ namespace PrismaDash
             int s = Mathf.FloorToInt(_score);
             bool record = s > _best;
             if (record) { _best = s; PlayerPrefs.SetInt("prisma_best", _best); PlayerPrefs.Save(); }
-            _hud.Center.text = $"<size=80><b>FIM DE JOGO</b></size>\n\nPontos: <b>{s}</b>\n" +
-                               (record ? "<color=#FFE14D><b>NOVO RECORDE!</b></color>" : $"Recorde: {_best}") +
-                               "\n\n<b>Clique / toque para jogar de novo</b>";
+            _hud.Center.text = $"<size=80><b>GAME OVER</b></size>\n\nScore: <b>{s}</b>\n" +
+                               (record ? "<color=#FFE14D><b>NEW RECORD!</b></color>" : $"Best: {_best}") +
+                               "\n\n<b>Tap to play again</b>";
         }
 
         // ---------------------------------------------------------------- loop

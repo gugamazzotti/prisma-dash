@@ -4,9 +4,14 @@
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
-  m_Fog: 0
+  m_Fog: 1
+  m_FogColor: {r: 0.04, g: 0.03, b: 0.08, a: 1}
+  m_FogMode: 1
+  m_FogDensity: 0.01
+  m_LinearFogStart: 28
+  m_LinearFogEnd: 95
   m_AmbientMode: 3
-  m_AmbientSkyColor: {r: 0.25, g: 0.22, b: 0.35, a: 1}
+  m_AmbientSkyColor: {r: 0.35, g: 0.3, b: 0.45, a: 1}
 --- !u!1 &100
 GameObject:
   m_ObjectHideFlags: 0

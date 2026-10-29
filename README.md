@@ -12,13 +12,15 @@ Sua esfera tem **polaridade**: **Ciano** ou **Magenta**. Portais coloridos ocupa
 - Juice: camera shake por "trauma", partículas, áudio sintetizado em runtime, câmera lenta no game over.
 
 ## Controles
-| Ação | Teclado/Mouse | Touch |
-|---|---|---|
-| Mudar de pista | `A`/`D` ou `←`/`→`, clique no terço esquerdo/direito da tela | Deslizar para os lados ou tocar nas laterais |
-| Trocar cor | `Espaço`, `W`, `↑` ou clique direito / clique no centro | Tocar no centro ou deslizar na vertical |
-| Começar/Reiniciar | Clique, `Espaço` ou `Enter` | Tocar |
+O jogo é de celular em retrato. O texto na tela só explica o toque:
 
-No retrato as três faixas continuam verticais: esquerda muda para a pista da esquerda, direita para a da direita, e o centro troca a cor. O toque que inicia ou reinicia a partida não conta como comando.
+| Ação | Toque |
+|---|---|
+| Mudar de pista | Tocar o terço esquerdo ou direito, ou deslizar para os lados |
+| Trocar cor | Tocar o centro, ou deslizar para cima ou para baixo |
+| Começar/Reiniciar | Tocar |
+
+O teclado continua funcionando, sem aparecer no tutorial: `A`/`D` ou `←`/`→` mudam de pista; `Espaço`, `W`, `↑` ou o clique direito trocam a cor; `Espaço` ou `Enter` começam ou reiniciam. O clique esquerdo usa as mesmas faixas do toque. O gesto que inicia a partida não muda de pista nem de cor.
 
 ## Como abrir
 1. Unity Hub → **Add project from disk** → selecione esta pasta (use um Unity **2022.3.x**; o projeto está em **2022.3.20f1**. Se a versão for diferente, aceite a atualização).
@@ -88,12 +90,16 @@ O primeiro build baixa a imagem do editor e pode levar bastante tempo. Os seguin
 ## Arquivos
 ```
 Assets/
-  Scenes/Main.unity              cena mínima (só um GameObject marcador)
+  Scenes/Main.unity              cena mínima (só um GameObject marcador; fog linear ligado)
+  Resources/Materials/Lit.mat    Standard com _EMISSION, carregado em runtime
+  Resources/Materials/Unlit.mat  Sprites/Default para as partículas
+  Shaders/PrismaVariants.shadervariants
+                                 variantes de luz direcional, fog e emissão
   WebGLTemplates/PrismaPortrait  página do player: quadro retrato e letterbox no desktop
   Scripts/Runtime/
     Bootstrap.cs                 entrada automática via RuntimeInitializeOnLoadMethod
     GameManager.cs               estados (menu/jogo/fim), input, spawn, dificuldade, colisão por pista
-    Palette.cs                   cores e materiais seguros p/ WebGL, helper de primitivos
+    Palette.cs                   cores; clona os materiais de Resources (sem Shader.Find)
     CameraRig.cs                 câmera de perseguição; FOV acompanha a proporção
     Fx.cs                        ParticleSystem único com Emit manual
     ProceduralAudio.cs           efeitos sonoros sintetizados (AudioClip.Create)
@@ -105,7 +111,8 @@ ProjectSettings/                 Unity 2022.3.20f1, canvas WebGL 540×960, Gzip 
 ```
 
 ## Notas técnicas
-- Materiais: o "lit" é clonado do material padrão dos primitivos (sempre incluído no build), o das partículas usa `Sprites/Default` (Always Included). Nada de `Shader.Find("Standard")` solto que poderia ser removido no build.
+- Materiais: a cena não tem renderers, então o build WebGL removia o shader Standard. Em runtime o material padrão do `CreatePrimitive` caía no shader de erro e a pista inteira ficava magenta. Agora `Lit.mat` e `Unlit.mat` ficam em `Resources`, o Standard (fileID 46) e o `Sprites/Default` estão em Always Included Shaders, e uma coleção de variantes pré-carrega luz direcional, fog linear e `_EMISSION`. O código clona esses assets; não usa `Shader.Find`.
+- Cores: jogador e portais ciano `(0.10, 0.95, 1)` ou magenta `(1, 0.15, 0.70)` com emissão; paredes escuras sem emissão; orbes da mesma cor com emissão mais forte; partículas usam o material unlit branco e a cor do vértice.
 - Sem TextMeshPro (evita o import de TMP Essentials); fonte `LegacyRuntime.ttf` embutida (a fonte embutida do Unity 2022.2+).
 - Colisão é lógica (pista + cruzamento de z), sem física — determinística e barata no WebGL.
 - No WebGL o áudio só inicia após a primeira interação do usuário (regra dos navegadores) — o clique de início resolve isso.
