@@ -1,0 +1,77 @@
+name: WebGL
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build WebGL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-WebGL-
+            Library-
+
+      - name: Build
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          unityVersion: auto
+          buildsPath: build
+          buildName: WebGL
+          buildMethod: PrismaDash.EditorTools.WebGLBuilder.Build
+
+      - name: Fix artifact ownership
+        run: |
+          for d in build Library; do
+            if [ -d "$d" ]; then sudo chown -R "$(id -u):$(id -g)" "$d"; fi
+          done
+
+      - name: Confirm WebGL output
+        run: |
+          if [ ! -f build/WebGL/WebGL/index.html ]; then
+            echo "index.html não encontrado em build/WebGL/WebGL" >&2
+            find build -name index.html -print >&2 || true
+            exit 1
+          fi
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/WebGL/WebGL
+
+  deploy:
+    name: Deploy GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
