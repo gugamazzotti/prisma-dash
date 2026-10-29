@@ -87,7 +87,8 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Build WebGL de preview (graze)"
           git push --force "https://x-access-token:${PREVIEW_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${PREVIEW_BRANCH}"
           sha=$(git rev-parse HEAD)
+          branch_url="https://raw.githack.com/${GITHUB_REPOSITORY}/${PREVIEW_BRANCH}/index.html"
           echo "preview_sha=$sha"
-          echo "preview_url=https://rawcdn.githack.com/${GITHUB_REPOSITORY}/${sha}/index.html"
+          echo "preview_url=$branch_url"
           echo "### Preview" >> "$GITHUB_STEP_SUMMARY"
-          echo "https://rawcdn.githack.com/${GITHUB_REPOSITORY}/${sha}/index.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "$branch_url" >> "$GITHUB_STEP_SUMMARY"
