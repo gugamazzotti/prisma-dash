@@ -75,17 +75,17 @@ jobs:
         continue-on-error: true
         env:
           PREVIEW_BRANCH: cursor/preview-graze-84af
+          PREVIEW_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           rm -rf /tmp/preview-site
           mkdir -p /tmp/preview-site
           cp -a build/WebGL/WebGL/. /tmp/preview-site/
           cd /tmp/preview-site
-          git init
-          git checkout -b "$PREVIEW_BRANCH"
+          git init -b "$PREVIEW_BRANCH"
           git add -A
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Build WebGL de preview (graze)"
-          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${PREVIEW_BRANCH}"
+          git push --force "https://x-access-token:${PREVIEW_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${PREVIEW_BRANCH}"
           sha=$(git rev-parse HEAD)
           echo "preview_sha=$sha"
           echo "preview_url=https://rawcdn.githack.com/${GITHUB_REPOSITORY}/${sha}/index.html"
