@@ -12,7 +12,7 @@ Sua esfera tem **polaridade**: **Ciano** ou **Magenta**. Portais coloridos ocupa
 - Juice: camera shake por "trauma", partículas, áudio sintetizado em runtime, câmera lenta no game over.
 
 ## Controles
-O jogo é de celular em retrato. O texto na tela só explica o toque:
+O jogo é de celular em retrato e os textos na tela estão em inglês. O tutorial só explica o toque:
 
 | Ação | Toque |
 |---|---|
