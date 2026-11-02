@@ -22,6 +22,9 @@ namespace PrismaDash
         private const float LaneWidth = 2.2f;
         private const float SpawnZ = 90f;
         private const float StartSpeed = 14f, MaxSpeed = 42f;
+        // Desvio no último instante: já saiu da pista da parede, mas ainda está
+        // a menos de 98% de uma pista de distância do centro dela.
+        private const float GrazeReach = 0.98f;
 
         private State _state;
         private Transform _player;
@@ -39,7 +42,7 @@ namespace PrismaDash
         private Material _wallMat, _ringMat;
 
         private int _lane, _polarity, _combo, _best;
-        private float _score, _speed, _time, _spawnTimer, _gameOverAt;
+        private float _score, _speed, _time, _spawnTimer, _gameOverAt, _grazePulse;
         private Vector2 _touchStart;
         private bool _swallowTouch;
 
@@ -160,11 +163,13 @@ namespace PrismaDash
             _entities.Clear();
             _state = State.Playing;
             _lane = 0; _polarity = 0; _combo = 0;
-            _score = 0f; _time = 0f; _spawnTimer = 0.8f;
+            _score = 0f; _time = 0f; _spawnTimer = 0.8f; _grazePulse = 0f;
             _speed = StartSpeed;
             _player.gameObject.SetActive(true);
+            _player.localScale = Vector3.one * 0.9f;
             _playerRenderer.sharedMaterial = _playerMats[0];
             _hud.Center.text = "";
+            _hud.ClearFlash();
         }
 
         private void GameOver()
@@ -176,6 +181,7 @@ namespace PrismaDash
             _fx.Burst(_player.position, Color.white, 40, 6f);
             _audio.Death();
             _player.gameObject.SetActive(false);
+            _hud.ClearFlash();
             int s = Mathf.FloorToInt(_score);
             bool record = s > _best;
             if (record) { _best = s; PlayerPrefs.SetInt("prisma_best", _best); PlayerPrefs.Save(); }
@@ -240,6 +246,10 @@ namespace PrismaDash
             MoveEntities(dt);
             Spawn(dt, difficulty);
             Resolve();
+
+            float grazeScale = 1f + 0.22f * _grazePulse;
+            _player.localScale = Vector3.one * (0.9f * grazeScale);
+            _grazePulse = Mathf.Max(0f, _grazePulse - dt * 2.5f);
 
             _hud.Score.text = $"{Mathf.FloorToInt(_score)}";
             _hud.Combo.text = _combo > 1 ? $"COMBO x{_combo}" : "";
@@ -397,14 +407,17 @@ namespace PrismaDash
         /// <summary>Verifica, quando a entidade cruza z≈0, se o jogador sobrevive/pontua.</summary>
         private void Resolve()
         {
+            // Pista "efetiva": onde a esfera está de fato (permite desvio no último instante).
+            int playerLane = Mathf.RoundToInt(_player.position.x / LaneWidth);
+            int grazePoints = 0;
+            var grazeAt = _player.position;
+
             foreach (var e in _entities)
             {
                 if (e.Done) continue;
                 float z = e.Go.transform.position.z;
                 if (z > 0.4f) continue;
                 e.Done = true;
-                // Pista "efetiva": onde a esfera está de fato (permite desvio no último instante)
-                int playerLane = Mathf.RoundToInt(_player.position.x / LaneWidth);
 
                 switch (e.Kind)
                 {
@@ -418,6 +431,11 @@ namespace PrismaDash
                         break;
                     case Kind.Wall:
                         if (e.Lane == playerLane) { GameOver(); return; }
+                        if (IsGraze(e))
+                        {
+                            grazePoints += GrazeBonus();
+                            grazeAt = e.Go.transform.position;
+                        }
                         break;
                     case Kind.Orb:
                         if (e.Lane != playerLane) break;
@@ -439,6 +457,35 @@ namespace PrismaDash
                         break;
                 }
             }
+
+            if (grazePoints > 0) AwardGraze(grazePoints, grazeAt);
+        }
+
+        /// <summary>
+        /// Perto o bastante da parede para ter sido um desvio tardio.
+        /// A colisão (mesma pista) já foi tratada antes desta checagem.
+        /// </summary>
+        private bool IsGraze(Entity wall)
+        {
+            float dist = Mathf.Abs(_player.position.x - wall.Lane * LaneWidth);
+            return dist < LaneWidth * GrazeReach;
+        }
+
+        private int GrazeBonus()
+        {
+            float difficulty = Mathf.Clamp01(_time / 100f);
+            return Mathf.RoundToInt(Mathf.Lerp(12f, 28f, difficulty));
+        }
+
+        private void AwardGraze(int points, Vector3 wallPos)
+        {
+            _score += points;
+            _grazePulse = 1f;
+            _cam.Shake(0.16f);
+            var at = Vector3.Lerp(_player.position, wallPos, 0.45f);
+            _fx.Burst(at, new Color(1f, 0.88f, 0.35f), 24, 7f);
+            _audio.Graze();
+            _hud.ShowFlash($"GRAZE  +{points}", new Color(1f, 0.86f, 0.28f));
         }
     }
 }

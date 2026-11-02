@@ -9,9 +9,12 @@ namespace PrismaDash
         public const float ReferenceWidth = 1080f;
         public const float ReferenceHeight = 1920f;
 
-        public Text Score, Center, Combo;
+        public Text Score, Center, Combo, Flash;
         private CanvasScaler _scaler;
-        private RectTransform _scoreRt, _comboRt, _centerRt;
+        private RectTransform _scoreRt, _comboRt, _centerRt, _flashRt;
+        private Outline _flashOutline;
+        private float _flashUntil;
+        private Color _flashColor = Color.white;
 
         public static Hud Build()
         {
@@ -30,14 +33,37 @@ namespace PrismaDash
             hud.Score = MakeText(go.transform, font, 52, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(40f, -28f), new Vector2(640f, 200f), false);
             hud.Combo = MakeText(go.transform, font, 40, TextAnchor.UpperRight, new Vector2(1f, 1f), new Vector2(-40f, -28f), new Vector2(640f, 200f), false);
             hud.Center = MakeText(go.transform, font, 40, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(960f, 1500f), true);
+            hud.Flash = MakeText(go.transform, font, 68, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.4f), Vector2.zero, new Vector2(900f, 160f), false);
+            hud.Flash.gameObject.name = "Flash";
             hud._scoreRt = hud.Score.rectTransform;
             hud._comboRt = hud.Combo.rectTransform;
             hud._centerRt = hud.Center.rectTransform;
+            hud._flashRt = hud.Flash.rectTransform;
+            hud._flashOutline = hud.Flash.GetComponent<Outline>();
             hud.ApplyLayout();
             return hud;
         }
 
-        private void Update() => ApplyLayout();
+        /// <summary>Texto curto no meio da pista (graze). Some sozinho.</summary>
+        public void ShowFlash(string text, Color color)
+        {
+            _flashColor = color;
+            Flash.text = $"<b>{text}</b>";
+            _flashUntil = Time.unscaledTime + 0.6f;
+        }
+
+        public void ClearFlash()
+        {
+            _flashUntil = 0f;
+            if (Flash != null) Flash.text = "";
+            if (_flashRt != null) _flashRt.localScale = Vector3.one;
+        }
+
+        private void Update()
+        {
+            ApplyLayout();
+            AnimateFlash();
+        }
 
         private void ApplyLayout()
         {
@@ -69,6 +95,37 @@ namespace PrismaDash
                 _centerRt.anchorMin = _centerRt.anchorMax = new Vector2(0.5f, 0.5f);
                 _centerRt.pivot = new Vector2(0.5f, 0.5f);
                 _centerRt.anchoredPosition = Vector2.zero;
+            }
+            if (_flashRt != null)
+            {
+                _flashRt.anchorMin = _flashRt.anchorMax = new Vector2(0.5f, 0.4f);
+                _flashRt.pivot = new Vector2(0.5f, 0.5f);
+                _flashRt.anchoredPosition = Vector2.zero;
+            }
+        }
+
+        private void AnimateFlash()
+        {
+            if (Flash == null || _flashRt == null) return;
+            float life = _flashUntil - Time.unscaledTime;
+            if (life <= 0f)
+            {
+                if (!string.IsNullOrEmpty(Flash.text)) Flash.text = "";
+                _flashRt.localScale = Vector3.one;
+                return;
+            }
+
+            float u = 1f - Mathf.Clamp01(life / 0.6f);
+            float punch = 1f + 0.4f * Mathf.Exp(-u * 7f);
+            _flashRt.localScale = new Vector3(punch, punch, 1f);
+            var c = _flashColor;
+            c.a = life < 0.18f ? Mathf.Clamp01(life / 0.18f) : 1f;
+            Flash.color = c;
+            if (_flashOutline != null)
+            {
+                var oc = _flashOutline.effectColor;
+                oc.a = 0.65f * c.a;
+                _flashOutline.effectColor = oc;
             }
         }
 
