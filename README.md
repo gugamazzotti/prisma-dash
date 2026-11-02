@@ -10,6 +10,7 @@ Your sphere has a **polarity**: **Cyan** or **Magenta**. Colored portals span th
 - Speed rises from 14 → 42 u/s over ~100 s; the gap between obstacles shrinks.
 - Points come from distance plus bonuses (portal 10×combo, orb 5×combo). The high score is saved in `PlayerPrefs` (it persists in the browser).
 - Dodging a wall at the last instant counts as a **graze**: the sphere has already left the wall's lane, but it is still close. That adds 12 to 28 points (the bonus rises with speed) and sets off a gold spark, a short shake, and the text GRAZE. A dodge with room to spare scores nothing.
+- A flat wake follows the sphere. Each disc keeps the color it had when it was left behind, so a swap paints a two-tone ribbon, and the ribbon stretches as speed rises from 14 to 42. It hides on game over.
 - Juice: camera shake from "trauma", particles, audio synthesized at runtime, slow motion on game over.
 
 ## Controls
