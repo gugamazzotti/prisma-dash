@@ -8,6 +8,7 @@ namespace PrismaDash
     /// A nave tem uma cor (Ciano/Magenta). Portais coloridos só deixam passar quem tem a MESMA cor;
     /// paredes escuras precisam ser desviadas trocando de pista; orbes da sua cor dão combo.
     /// O mundo se move em direção ao jogador (que fica em z = 0); colisão é lógica por pista.
+    /// Um rastro achatado atrás da esfera guarda a cor de cada instante e fica mais longo com a velocidade.
     /// </summary>
     public class GameManager : MonoBehaviour
     {
@@ -25,6 +26,11 @@ namespace PrismaDash
         // Desvio no último instante: já saiu da pista da parede, mas ainda está
         // a menos de 98% de uma pista de distância do centro dela.
         private const float GrazeReach = 0.98f;
+        // Rastro: discos entre a esfera e um ponto mais atrás. O alcance cresce com a velocidade.
+        private const int WakeCount = 10;
+        private const float WakeNear = 0.72f;
+        private const float WakeFarSlow = 1.7f;
+        private const float WakeFarFast = 4.5f;
 
         private State _state;
         private Transform _player;
@@ -42,9 +48,15 @@ namespace PrismaDash
         private Material _wallMat, _ringMat;
 
         private int _lane, _polarity, _combo, _best;
-        private float _score, _speed, _time, _spawnTimer, _gameOverAt, _grazePulse;
+        private float _score, _speed, _time, _spawnTimer, _gameOverAt, _grazePulse, _wakePop;
         private Vector2 _touchStart;
         private bool _swallowTouch;
+        private Transform _wakeRoot;
+        private Transform[] _wake;
+        private Renderer[] _wakeRenderers;
+        private Vector3[] _wakePos;
+        private int[] _wakeColor;
+        private float _wakeTimer;
 
         // ---------------------------------------------------------------- setup
         private void Awake()
@@ -99,6 +111,7 @@ namespace PrismaDash
             _fx = new GameObject("FX").AddComponent<Fx>();
             _audio = gameObject.AddComponent<ProceduralAudio>();
             _hud = Hud.Build();
+            BuildWake();
 
             EnterMenu();
         }
@@ -155,6 +168,7 @@ namespace PrismaDash
                 "Tap the <b>center</b>, or swipe up or down,\n" +
                 "to switch color.\n\n" +
                 "<b>Tap to start</b>";
+            ResetWake();
         }
 
         private void StartGame()
@@ -163,13 +177,14 @@ namespace PrismaDash
             _entities.Clear();
             _state = State.Playing;
             _lane = 0; _polarity = 0; _combo = 0;
-            _score = 0f; _time = 0f; _spawnTimer = 0.8f; _grazePulse = 0f;
+            _score = 0f; _time = 0f; _spawnTimer = 0.8f; _grazePulse = 0f; _wakePop = 0f;
             _speed = StartSpeed;
             _player.gameObject.SetActive(true);
             _player.localScale = Vector3.one * 0.9f;
             _playerRenderer.sharedMaterial = _playerMats[0];
             _hud.Center.text = "";
             _hud.ClearFlash();
+            ResetWake();
         }
 
         private void GameOver()
@@ -181,6 +196,7 @@ namespace PrismaDash
             _fx.Burst(_player.position, Color.white, 40, 6f);
             _audio.Death();
             _player.gameObject.SetActive(false);
+            SetWakeActive(false);
             _hud.ClearFlash();
             int s = Mathf.FloorToInt(_score);
             bool record = s > _best;
@@ -200,6 +216,7 @@ namespace PrismaDash
             {
                 case State.Menu:
                     AnimateWorld(dt, StartSpeed * 0.5f);
+                    UpdateWake(dt, StartSpeed * 0.5f);
                     if (any) StartGame();
                     break;
                 case State.GameOver:
@@ -230,6 +247,7 @@ namespace PrismaDash
                 _playerRenderer.sharedMaterial = _playerMats[_polarity];
                 _fx.Burst(_player.position, Palette.Polarity[_polarity], 14, 4f);
                 _audio.Switch();
+                _wakePop = 1f;
             }
 
             // Movimento suave entre pistas + "tilt"
@@ -250,6 +268,7 @@ namespace PrismaDash
             float grazeScale = 1f + 0.22f * _grazePulse;
             _player.localScale = Vector3.one * (0.9f * grazeScale);
             _grazePulse = Mathf.Max(0f, _grazePulse - dt * 2.5f);
+            UpdateWake(dt, _speed);
 
             _hud.Score.text = $"{Mathf.FloorToInt(_score)}";
             _hud.Combo.text = _combo > 1 ? $"COMBO x{_combo}" : "";
@@ -486,6 +505,97 @@ namespace PrismaDash
             _fx.Burst(at, new Color(1f, 0.88f, 0.35f), 24, 7f);
             _audio.Graze();
             _hud.ShowFlash($"GRAZE  +{points}", new Color(1f, 0.86f, 0.28f));
+        }
+
+        /// <summary>
+        /// Discos no chão, atrás da esfera. Cada um lembra a cor de quando ficou para trás,
+        /// então a troca de polaridade pinta uma faixa de duas cores. O comprimento sobe
+        /// com a velocidade (14 → 42). Os materiais são os mesmos da esfera: shader
+        /// PrismaDash/Color, já referenciado, sem variante nova.
+        /// </summary>
+        private void BuildWake()
+        {
+            _wakeRoot = new GameObject("Wake").transform;
+            _wake = new Transform[WakeCount];
+            _wakeRenderers = new Renderer[WakeCount];
+            _wakePos = new Vector3[WakeCount];
+            _wakeColor = new int[WakeCount];
+            for (int i = 0; i < WakeCount; i++)
+            {
+                var go = Palette.Prim(PrimitiveType.Sphere, _playerMats[0], _wakeRoot);
+                go.name = "Wake";
+                _wake[i] = go.transform;
+                _wakeRenderers[i] = go.GetComponent<Renderer>();
+            }
+        }
+
+        private void ResetWake()
+        {
+            SetWakeActive(true);
+            var origin = _player.position;
+            _wakeTimer = 0f;
+            for (int i = 0; i < WakeCount; i++)
+            {
+                _wakePos[i] = origin;
+                _wakeColor[i] = _polarity;
+                _wakeRenderers[i].sharedMaterial = _playerMats[_polarity];
+            }
+            PlaceWake(0f);
+        }
+
+        private void SetWakeActive(bool on)
+        {
+            if (_wakeRoot != null) _wakeRoot.gameObject.SetActive(on);
+        }
+
+        private void UpdateWake(float dt, float speed)
+        {
+            if (_wakeRoot == null || !_wakeRoot.gameObject.activeSelf) return;
+
+            float speedT = Mathf.Clamp01(Mathf.InverseLerp(StartSpeed, MaxSpeed, speed));
+            _wakeTimer -= dt;
+            if (_wakeTimer <= 0f)
+            {
+                _wakeTimer = Mathf.Lerp(0.065f, 0.04f, speedT);
+                for (int i = WakeCount - 1; i > 0; i--)
+                {
+                    _wakePos[i] = _wakePos[i - 1];
+                    _wakeColor[i] = _wakeColor[i - 1];
+                }
+            }
+
+            _wakePos[0] = _player.position;
+            _wakeColor[0] = _polarity;
+            PlaceWake(speedT);
+            _wakePop = Mathf.Max(0f, _wakePop - dt * 5f);
+        }
+
+        private void PlaceWake(float speedT)
+        {
+            float far = Mathf.Lerp(WakeFarSlow, WakeFarFast, speedT);
+            float stretch = Mathf.Lerp(1.15f, 1.85f, speedT);
+            float pop = 1f + 0.5f * _wakePop;
+            for (int i = 0; i < WakeCount; i++)
+            {
+                float u = i / (WakeCount - 1f);
+                var p = _wakePos[i];
+                p.y = 0.08f;
+                p.z = Mathf.Lerp(WakeNear, far, u);
+
+                var t = _wake[i];
+                t.position = p;
+                Vector3 from = i == 0 ? _player.position : _wakePos[i - 1];
+                var flat = from - _wakePos[i];
+                flat.y = 0f;
+                t.rotation = flat.sqrMagnitude > 0.0004f
+                    ? Quaternion.LookRotation(flat, Vector3.up)
+                    : Quaternion.identity;
+
+                float width = Mathf.Lerp(0.7f, 0.16f, u);
+                if (i == 0) width *= pop;
+                t.localScale = new Vector3(width, 0.06f, width * stretch);
+                _wakeRenderers[i].sharedMaterial = _playerMats[Mathf.Clamp(_wakeColor[i], 0, 1)];
+            }
         }
     }
 }
